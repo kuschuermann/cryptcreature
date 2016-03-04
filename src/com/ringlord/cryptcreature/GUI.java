@@ -33,7 +33,7 @@ public class GUI
 {
   public GUI()
   {
-    super( "CryptCreature" );
+    super( "CryptCreature " + CryptCreature.VERSION + " (" + CryptCreature.VERDATE + ")" );
 
     try
       {
