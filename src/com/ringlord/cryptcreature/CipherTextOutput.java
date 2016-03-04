@@ -82,7 +82,7 @@ public class CipherTextOutput
               }
             else
               {
-                logger.info( "Secret Key = " + Transformations.toString( key.getEncoded() ) );
+                logger.info( "Secret Key generated" );
               }
             break;
 

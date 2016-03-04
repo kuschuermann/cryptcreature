@@ -88,7 +88,7 @@ public class GUI
     final JTextArea plainTextInput = new JTextArea();
     final JPanel plainTextInputPanel = new JPanel( new BorderLayout() );
     plainTextInputPanel.add( BorderLayout.NORTH,
-                             new JLabel( "1. Plain Text Input \u2014 Type your secret message here:" ) );
+                             new JLabel( "1. Plain Text Input \u2014 To encrypt, type/paste your secret message here:" ) );
     plainTextInputPanel.add( BorderLayout.WEST,
                              new JLabel( "      " ) );
     plainTextInputPanel.add( BorderLayout.CENTER,
@@ -99,7 +99,7 @@ public class GUI
                                                                     plainTextInput );
     final JPanel cipherTextOutputPanel = new JPanel( new BorderLayout() );
     cipherTextOutputPanel.add( BorderLayout.NORTH,
-                               new JLabel( "2. Base64 encoded \u2026 Cipher Text / InitVector / SHA-256 Hash \u2014 Send this to a friend to decrypt" ) );
+                               new JLabel( "2. Base64 encoded \u2026 CipherText/InitVector/SHA-256 Hash \u2014 Send this or paste cipher text here:" ) );
     cipherTextOutputPanel.add( BorderLayout.WEST,
                                new JLabel( "      " ) );
     cipherTextOutputPanel.add( BorderLayout.CENTER,
@@ -123,22 +123,35 @@ public class GUI
     ioPanel.add( plainTextInputPanel );
     ioPanel.add( cipherTextOutputPanel );
     ioPanel.add( plainTextOutputPanel );
+
     final Border outer = BorderFactory.createEmptyBorder( 4,
                                                           12,
-                                                          12,
+                                                          0,
                                                           12 );
     final Border inner = BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Encryption & Deciphering" ),
                                                              BorderFactory.createEmptyBorder( 0,
                                                                                               4,
                                                                                               4,
                                                                                               4 ) );
-    ioPanel.setBorder( BorderFactory.createCompoundBorder( outer,
-                                                           inner ) );
+    final JLabel status = new JLabel( "Logging to a file in " +
+                                      new File( System.getProperty( "user.home" ),
+                                                ".cryptcreature" ) +
+                                      System.getProperty( "file.separator" ) );
+    status.setBorder( BorderFactory.createEmptyBorder( 4,
+                                                       12,
+                                                       6,
+                                                       12 ) );
+
     final JPanel layout = new JPanel( new BorderLayout() );
     layout.add( BorderLayout.NORTH,
                 cipherParameters );
     layout.add( BorderLayout.CENTER,
                 ioPanel );
+    layout.add( BorderLayout.SOUTH,
+                status );
+    ioPanel.setBorder( BorderFactory.createCompoundBorder( outer,
+                                                           inner ) );
+
     setContentPane( layout );
     pack();
 

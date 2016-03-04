@@ -7,6 +7,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,6 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Set;
@@ -79,7 +82,109 @@ public class CipherParameterPane
     saveSecretKey.setEnabled( false );
 
     secretKey = new JTextField( 24 );
+    secretKey.setForeground( new Color( 230,
+                                        230,
+                                        230,
+                                        255 ) );
+    secretKey.setBackground( new Color( 255,
+                                        255,
+                                        255,
+                                        255 ) );
+    secretKey.setSelectedTextColor( new Color( 255,
+                                               255,
+                                               255,
+                                               255 ) );
+    secretKey.setSelectionColor( new Color( 230,
+                                            230,
+                                            230,
+                                            255 ) );
     final JButton randomSecretKey = new JButton( "Random" );
+
+    final JTextField secretKeyHash = new JTextField( 24 );
+    secretKeyHash.setEditable( false );
+    secretKeyHash.setToolTipText( "<html>"
+                                  + "To verify that someone else is in possession<br>"
+                                  + "of the correct secret key, you can exchange<br>"
+                                  + "this digest hash, instead, but <i>never transmit<br>"
+                                  + "the </i>secret<i> key by insecure means!</i> Digests<br>"
+                                  + "are one-way cryptographic functions, which<br>"
+                                  + "reveal nothing about the original data, but<br>"
+                                  + "provide a type of data signature." );
+
+    final JComboBox<String> keyHashDigest = new JComboBox<>( new String[]{"SHA-256","SHA-1","MD5"} );
+    keyHashDigest.addItemListener( new ItemListener()
+    {
+      @Override
+      public void itemStateChanged( final ItemEvent e )
+      {
+        if( e.getStateChange() == ItemEvent.SELECTED )
+          {
+            updateSecretKeyDigest( secretKey,
+                                   secretKeyHash,
+                                   keyHashDigest );
+          }
+      }
+    } );
+    keyHashDigest.setToolTipText( "<html>"
+                                  + "The digest algorithm used<br>"
+                                  + "to create a hash of the<br>"
+                                  + "secret key." );
+
+    loadSecretKey.setToolTipText( "<html>"
+                                  + "Load secret key from a file on disk.<br>"
+                                  + "<b>Keep it secret, keep it safe!</b>" );
+    saveSecretKey.setToolTipText( "<html>"
+                                  + "Save current secret key to a file on disk.<br>"
+                                  + "<b>Keep it secret, keep it safe!</b>" );
+    randomSecretKey.addMouseListener( new MouseAdapter()
+    {
+      @Override
+      public void mouseEntered( final MouseEvent e )
+      {
+        final String name = (String)algorithmNames.getSelectedItem();
+        final String mode = (String)modeNames.getSelectedItem();
+        final String padding = (String)paddingNames.getSelectedItem();
+        final Algorithm a = Algorithm.find( name,
+                                            mode,
+                                            padding );
+
+        try
+          {
+            final KeyGenerator keyGenerator = KeyGenerator.getInstance( a.name() );
+            String text = keyGenerator.getProvider().toString().trim();
+            text = text.replaceAll( "&",
+                                    "&amp;" );
+            text = text.replaceAll( "<",
+                                    "&lt;" );
+            text = text.replaceAll( ">",
+                                    "&gt;" );
+            text = text.replaceAll( "'",
+                                    "&apos;" );
+            text = text.replaceAll( "\"",
+                                    "&quot;" );
+            randomSecretKey.setToolTipText( "<html>" +
+                                            "Generate a secret key randomly, using the<br>" +
+                                            "following provider for the <i>" +
+                                            a.name() +
+                                            "</i> algorithm:<br>" +
+                                            "<pre style=\"margin-left:8px;\"><i>" +
+                                            text +
+                                            "</i></pre>" +
+                                            "Note that the randomness of the key is of<br>" +
+                                            "extreme importance: Compromised software<br>" +
+                                            "and even compromised hardware exists. All<br>" +
+                                            "randomness is not created equal!" );
+          }
+        catch( final Exception x )
+          {
+            randomSecretKey.setToolTipText( "<html>"
+                                            + "Generate a secret key randomly,<br>"
+                                            + "using an algorithm which does<br>"
+                                            + "not supply provider information.<br>"
+                                            + "You might want to distrust it." );
+          }
+      }
+    } );
 
     keySizes = new JComboBox<>( keySizeModel );
 
@@ -116,6 +221,13 @@ public class CipherParameterPane
           }
       }
     } );
+    algorithmNames.setToolTipText( "<html>"
+                                   + "These are the names of algorithms that appear<br>"
+                                   + "be be installed on your computer and accessible<br>"
+                                   + "to your Java Virtual Machine. Pick one that you<br>"
+                                   + "have researched and found to be suitable for<br>"
+                                   + "your needs. Using the wrong algorithm can<br>"
+                                   + "become a liability for you." );
 
     modeNames = new JComboBox<>( modesModel );
     modeNames.addItemListener( new ItemListener()
@@ -206,6 +318,22 @@ public class CipherParameterPane
           }
       }
     } );
+    keySizes.setToolTipText( "<html>"
+                             + "Supported key lengths. If you see<br>"
+                             + "no keys of size 192 or larger, then<br>"
+                             + "your JVM's security policy does not<br>"
+                             + "allow for unlimited strength crypto.<br>"
+                             + "<br>"
+                             + "Longer keys require significantly<br>"
+                             + "greater computational resources<br>"
+                             + "for brute-force attacks. Example:<br>"
+                             + "a 128-bit key has 2<sup>128</sup> variations<br>"
+                             + "(a 38-digit decimal number); a<br>"
+                             + "192-bit key has 2<sup>192</sup> variations (a<br>"
+                             + "57-digit decimal number), which<br>"
+                             + "is 18 446 744 073 709 551 612<br>"
+                             + "times more difficult to break using<br>"
+                             + "brute-force computations." );
 
     algorithmModel.update( Algorithm.allNames() );
 
@@ -325,7 +453,11 @@ public class CipherParameterPane
             final Key key = keyGenerator.generateKey();
             final byte[] keyBytes = key.getEncoded();
             secretKey.setText( new String( Base64.encode( keyBytes ) ) );
-            secretKey.setToolTipText( "Secret Key Length = " + (8 * keyBytes.length) + " bits" );
+            secretKey.setToolTipText( "<html>" +
+                                      "Secret Key Length = " +
+                                      (8 * keyBytes.length) +
+                                      " bits<br>" +
+                                      "<b>Keep it secret, keep it safe!</b>" );
           }
         catch( final NoSuchAlgorithmException x )
           {
@@ -494,10 +626,17 @@ public class CipherParameterPane
       {
         notifyActionListeners( ACTION_SECRET_KEY_CHANGED );
         saveSecretKey.setEnabled( secretKey.getText().length() > 0 );
+        updateSecretKeyDigest( secretKey,
+                               secretKeyHash,
+                               keyHashDigest );
       }
     } );
 
-    secretKey.setToolTipText( "<html>" + "A Base64-encoded secret key to match<br>" + "both algorithm and key size." );
+    secretKey.setToolTipText( "<html>"
+                              + "A Base64-encoded secret key to match<br>"
+                              + "both the algorithm and key size. <i>Never<br>"
+                              + "exchange a secret key over insecure<br>"
+                              + "channels!</i>" );
 
     final JPanel keyButtons = new JPanel( new GridLayout( 1,
                                                           0,
@@ -506,14 +645,40 @@ public class CipherParameterPane
     keyButtons.add( loadSecretKey );
     keyButtons.add( saveSecretKey );
     keyButtons.add( randomSecretKey );
+
+    final JPanel secretKeyPanel = new JPanel( new BorderLayout( 4,
+                                                                0 ) );
+    secretKeyPanel.add( BorderLayout.CENTER,
+                        secretKey );
+    secretKeyPanel.add( BorderLayout.EAST,
+                        keyButtons );
+
+    final JPanel secretHashPanel = new JPanel( new BorderLayout( 4,
+                                                                 0 ) );
+    secretHashPanel.add( BorderLayout.CENTER,
+                         secretKeyHash );
+    secretHashPanel.add( BorderLayout.EAST,
+                         keyHashDigest );
+
+    final JPanel keyLabels = new JPanel( new GridLayout( 0,
+                                                         1,
+                                                         0,
+                                                         4 ) );
+    final JPanel keyFields = new JPanel( new GridLayout( 0,
+                                                         1,
+                                                         0,
+                                                         4 ) );
+    keyLabels.add( new JLabel( "Secret key:" ) );
+    keyLabels.add( new JLabel( "Key digest:" ) );
+    keyFields.add( secretKeyPanel );
+    keyFields.add( secretHashPanel );
+
     final JPanel keyPanel = new JPanel( new BorderLayout( 4,
                                                           0 ) );
     keyPanel.add( BorderLayout.WEST,
-                  new JLabel( "Secret key:" ) );
+                  keyLabels );
     keyPanel.add( BorderLayout.CENTER,
-                  secretKey );
-    keyPanel.add( BorderLayout.EAST,
-                  keyButtons );
+                  keyFields );
 
     final JPanel ivKeyPanel = new JPanel( new BorderLayout( 0,
                                                             4 ) );
@@ -621,12 +786,42 @@ public class CipherParameterPane
    */
   public byte[] getChosenInitVector()
   {
-    final byte[] ivBytes = fixedInitVector.getText().trim().getBytes();
-    if( ivBytes.length > 0 )
+    if( fixedInitVector.isEnabled() )
       {
-        return Base64.decode( ivBytes );
+        final byte[] ivBytes = fixedInitVector.getText().trim().getBytes();
+        if( ivBytes.length > 0 )
+          {
+            return Base64.decode( ivBytes );
+          }
       }
     return null;
+  }
+
+
+  private static void updateSecretKeyDigest( final JTextField secretKey,
+                                             final JTextField secretKeyHash,
+                                             final JComboBox<String> keyHashDigest )
+  {
+    final byte[] keyBytes = secretKey.getText().trim().getBytes();
+    if( keyBytes.length > 0 )
+      {
+        final byte[] secretKeyBytes = Base64.decode( keyBytes );
+        final String digestAlgorithm = "" + keyHashDigest.getSelectedItem();
+        try
+          {
+            final MessageDigest md = MessageDigest.getInstance( digestAlgorithm );
+            final byte[] hash = md.digest( secretKeyBytes );
+            final String hash64 = new String( Base64.encode( hash ) );
+            secretKeyHash.setText( hash64 );
+            return;
+          }
+        catch( final NoSuchAlgorithmException x )
+          {
+            // TODO Auto-generated catch block
+            x.printStackTrace();
+          }
+      }
+    secretKeyHash.setText( "" );
   }
 
 
