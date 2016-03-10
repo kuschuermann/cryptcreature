@@ -16,9 +16,9 @@ import com.ringlord.logging.LogFormatter;
 
 public class CryptCreature
 {
-  public static final String VERSION = "1.1";
-  public static final String VERDATE = "2015-10-15";
-  public static final String CPYEARS = "2014,2015";
+  public static final String VERSION = "1.2";
+  public static final String VERDATE = "2016-03-09";
+  public static final String CPYEARS = "2014,2016";
 
 
   public static final void main( final String[] args )

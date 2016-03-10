@@ -4,10 +4,19 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -16,12 +25,15 @@ import java.util.logging.Logger;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
+import javax.swing.text.JTextComponent;
 
 import com.ringlord.Config;
 import com.ringlord.CryptCreature;
@@ -104,6 +116,40 @@ public class GUI
                                new JLabel( "      " ) );
     cipherTextOutputPanel.add( BorderLayout.CENTER,
                                new JScrollPane( cipherTextOutput ) );
+    cipherTextOutput.addMouseListener( new MouseAdapter()
+    {
+      @Override
+      public void mousePressed( final MouseEvent e )
+      {
+        if( e.isPopupTrigger() )
+          {
+            popup( cipherTextOutput,
+                   e );
+          }
+      }
+
+
+      @Override
+      public void mouseReleased( final MouseEvent e )
+      {
+        if( e.isPopupTrigger() )
+          {
+            popup( cipherTextOutput,
+                   e );
+          }
+      }
+
+
+      @Override
+      public void mouseClicked( final MouseEvent e )
+      {
+        if( e.isPopupTrigger() )
+          {
+            popup( cipherTextOutput,
+                   e );
+          }
+      }
+    } );
 
     // PLAIN TEXT OUTPUT
     final PlainTextOutput plainTextOutput = new PlainTextOutput( cipherParameters,
@@ -161,6 +207,63 @@ public class GUI
       {
         setBounds( xywh );
       }
+  }
+
+
+  private void popup( final JTextComponent cipherTextOutput,
+                      final MouseEvent e )
+  {
+    final JPopupMenu popup = new JPopupMenu();
+    final JMenuItem copySelectionEncoded = new JMenuItem( "Copy URL encoded" );
+    final JMenuItem copySelectionAsIs = new JMenuItem( "Copy" );
+    copySelectionEncoded.addActionListener( new ActionListener()
+    {
+      @Override
+      public void actionPerformed( final ActionEvent e )
+      {
+        String sel = cipherTextOutput.getSelectedText();
+        if( sel == null )
+          {
+            sel = cipherTextOutput.getText();
+          }
+        try
+          {
+            sel = sel.replaceAll( "\\s+",
+                                  "," );
+            sel = URLEncoder.encode( sel,
+                                     "UTF-8" );
+            final StringSelection selection = new StringSelection( sel );
+            final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents( selection,
+                                   selection );
+          }
+        catch( final UnsupportedEncodingException x )
+          {
+            x.printStackTrace();
+          }
+      }
+    } );
+    copySelectionAsIs.addActionListener( new ActionListener()
+    {
+      @Override
+      public void actionPerformed( final ActionEvent e )
+      {
+        String sel = cipherTextOutput.getSelectedText();
+        if( sel == null )
+          {
+            sel = cipherTextOutput.getText();
+          }
+        final StringSelection selection = new StringSelection( sel );
+        final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents( selection,
+                               selection );
+      }
+    } );
+    popup.add( copySelectionEncoded );
+    popup.add( copySelectionAsIs );
+    popup.show( e.getComponent(),
+                e.getX(),
+                e.getY() );
   }
 
 
