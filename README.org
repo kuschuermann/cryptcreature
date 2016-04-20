@@ -1,0 +1,19 @@
+* CryptCreature
+:  Copyright © 2014–2016 Ringlord Technologies
+:  Copyright © 2014–2016 K. Udo Schuermann
+:  All rights reserved
+** Introduction
+   CryptCreature provides you with an interactive way to explore
+   cryptography: Pick an algorithm, mode, and padding; create a random
+   key of different sizes, load a key from disk, and save it for
+   later; watch the cipher text change as you type; see at hand of a
+   visual image why ECB mode is so bad. More importantly, learn from
+   the wealth of information provided by the program’s popup tool
+   tips, and if you like reading source code, well that’s in there,
+   too!
+** License
+   CryptCreature is licensed under the GNU General Public License v3
+   (or later at your option).
+** GitHub Repository
+   The sources are at GitHub (Project: cryptcreature):
+   https://github.com/kuschuermann/cryptcreature
