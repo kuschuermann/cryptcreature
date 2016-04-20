@@ -1,6 +1,7 @@
 package com.ringlord.cryptcreature;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Rectangle;
@@ -13,6 +14,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -23,6 +25,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -96,26 +100,88 @@ public class GUI
                                                                  4,
                                                                  12 ) );
 
+    final Icon tuxIcon = Images.getIcon( "/img/tux.png" );
+    final BufferedImage img = (BufferedImage)((ImageIcon)tuxIcon).getImage();
+    final int wide = img.getWidth( null );
+    final int high = img.getHeight( null );
+    final BufferedImage buf = new BufferedImage( wide,
+                                                 high,
+                                                 img.getType() );
+    final int i = 0;
+    for( int w = 0; w < wide; w++ )
+      {
+        for( int h = 0; h < high; h++ )
+          {
+            buf.setRGB( w,
+                        h,
+                        0xffffffff );
+          }
+      }
+
+    final JLabel inputPicture = new JLabel( tuxIcon );
+    final JLabel outputPicture = new JLabel( new ImageIcon( buf ) );
+
+    inputPicture.setBorder( BorderFactory.createLineBorder( Color.black,
+                                                            1 ) );
+    outputPicture.setBorder( BorderFactory.createLineBorder( Color.black,
+                                                             1 ) );
+
+    inputPicture.setToolTipText( "<html>"
+                                 + "Tux has large areas of the same color,<br>"
+                                 + "which is helpful in demonstrating flaws<br>"
+                                 + "in cipher algorithsm (such as ECB) by<br>"
+                                 + "visual means." );
+    outputPicture.setToolTipText( "<html>"
+                                  + "Random-looking pixels here are no<br>"
+                                  + "guarantee of a good cipher algorithm,<br>"
+                                  + "but obvious flaws (such as with ECB)<br>"
+                                  + "are <em>definitely an issue!</em><br>"
+                                  + "<br>"
+                                  + "The picture updates when the key,<br>"
+                                  + "algorithm, or init vector are changed." );
+
     // PLAIN TEXT INPUT
     final JTextArea plainTextInput = new JTextArea();
     final JPanel plainTextInputPanel = new JPanel( new BorderLayout() );
-    plainTextInputPanel.add( BorderLayout.NORTH,
-                             new JLabel( "1. Plain Text Input \u2014 To encrypt, type/paste your secret message here:" ) );
+    final JPanel inputImagePane = new JPanel( new BorderLayout() );
+    inputImagePane.add( BorderLayout.NORTH,
+                        inputPicture );
+    inputImagePane.setBorder( BorderFactory.createEmptyBorder( 2,
+                                                               4,
+                                                               0,
+                                                               0 ) );
+    plainTextInputPanel
+        .add( BorderLayout.NORTH,
+              new JLabel( "1. Plain Text Input \u2014 To encrypt, type/paste your secret message here:" ) );
     plainTextInputPanel.add( BorderLayout.WEST,
                              new JLabel( "      " ) );
     plainTextInputPanel.add( BorderLayout.CENTER,
                              new JScrollPane( plainTextInput ) );
+    plainTextInputPanel.add( BorderLayout.EAST,
+                             inputImagePane );
 
     // CIPHER TEXT SPEC OUTPUT
     final CipherTextOutput cipherTextOutput = new CipherTextOutput( cipherParameters,
-                                                                    plainTextInput );
+                                                                    plainTextInput,
+                                                                    inputPicture,
+                                                                    outputPicture );
     final JPanel cipherTextOutputPanel = new JPanel( new BorderLayout() );
-    cipherTextOutputPanel.add( BorderLayout.NORTH,
-                               new JLabel( "2. Base64 encoded \u2026 CipherText/InitVector/SHA-256 Hash \u2014 Send this or paste cipher text here:" ) );
+    final JPanel outputImagePane = new JPanel( new BorderLayout() );
+    outputImagePane.setBorder( BorderFactory.createEmptyBorder( 2,
+                                                                4,
+                                                                0,
+                                                                0 ) );
+    outputImagePane.add( BorderLayout.NORTH,
+                         outputPicture );
+    cipherTextOutputPanel
+        .add( BorderLayout.NORTH,
+              new JLabel( "2. Base64 encoded \u2026 CipherText/InitVector/SHA-256 Hash \u2014 Send this or paste cipher text here:" ) );
     cipherTextOutputPanel.add( BorderLayout.WEST,
                                new JLabel( "      " ) );
     cipherTextOutputPanel.add( BorderLayout.CENTER,
                                new JScrollPane( cipherTextOutput ) );
+    cipherTextOutputPanel.add( BorderLayout.EAST,
+                               outputImagePane );
     cipherTextOutput.addMouseListener( new MouseAdapter()
     {
       @Override
@@ -174,7 +240,8 @@ public class GUI
                                                           12,
                                                           0,
                                                           12 );
-    final Border inner = BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Encryption & Deciphering" ),
+    final Border inner = BorderFactory.createCompoundBorder( BorderFactory
+                                                                 .createTitledBorder( "Encryption & Deciphering" ),
                                                              BorderFactory.createEmptyBorder( 0,
                                                                                               4,
                                                                                               4,
@@ -182,7 +249,8 @@ public class GUI
     final JLabel status = new JLabel( "Logging to a file in " +
                                       new File( System.getProperty( "user.home" ),
                                                 ".cryptcreature" ) +
-                                      System.getProperty( "file.separator" ) );
+                                      System.getProperty( "file.separator" ) +
+                                      " \u2026 See tool tip popups for lots of info!" );
     status.setBorder( BorderFactory.createEmptyBorder( 4,
                                                        12,
                                                        6,

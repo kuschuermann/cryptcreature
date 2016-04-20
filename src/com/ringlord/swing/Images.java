@@ -46,35 +46,35 @@ public class Images
     BufferedImage result = images.get( name );
     if( result == null )
       {
-        final InputStream f = Images.class.getResourceAsStream( name );
-        if( f != null )
-          {
-            try
-              {
-                result = ImageIO.read( f );
-                images.put( name,
-                            result );
-              }
-            catch( final IOException x )
-              {
-                x.printStackTrace();
-              }
-            finally
-              {
-                try
-                  {
-                    f.close();
-                  }
-                catch( final IOException e )
-                  {
-                    // cleanup failed, don't bother complaining
-                  }
-              }
-          }
-        else
-          {
-            Logger.getGlobal().warning( "Missing image: " + name );
-          }
+	final InputStream f = Images.class.getResourceAsStream( name );
+	if( f != null )
+	  {
+	    try
+	      {
+		result = ImageIO.read( f );
+		images.put( name,
+		            result );
+	      }
+	    catch( final IOException x )
+	      {
+		x.printStackTrace();
+	      }
+	    finally
+	      {
+		try
+		  {
+		    f.close();
+		  }
+		catch( final IOException e )
+		  {
+		    // cleanup failed, don't bother complaining
+		  }
+	      }
+	  }
+	else
+	  {
+	    Logger.getGlobal().warning( "Missing image: " + name );
+	  }
       }
     return result;
   }
@@ -96,13 +96,13 @@ public class Images
     ImageIcon result = icons.get( name );
     if( result == null )
       {
-        final BufferedImage image = getImage( name );
-        if( image != null )
-          {
-            result = new ImageIcon( image );
-            icons.put( name,
-                       result );
-          }
+	final BufferedImage image = getImage( name );
+	if( image != null )
+	  {
+	    result = new ImageIcon( image );
+	    icons.put( name,
+		       result );
+	  }
       }
     return result;
   }
@@ -125,20 +125,20 @@ public class Images
    *         Window.
    */
   public static boolean setWindowIcons( final Window window,
-                                        final String ... availableNames )
+	                                final String... availableNames )
   {
     final List<BufferedImage> images = new ArrayList<>();
     for( final String name : availableNames )
       {
-        final BufferedImage image = getImage( name );
-        if( image != null )
-          {
-            images.add( image );
-          }
+	final BufferedImage image = getImage( name );
+	if( image != null )
+	  {
+	    images.add( image );
+	  }
       }
     if( images.isEmpty() )
       {
-        return false;
+	return false;
       }
     window.setIconImages( images );
     return true;

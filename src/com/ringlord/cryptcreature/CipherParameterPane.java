@@ -230,6 +230,7 @@ public class CipherParameterPane
                                    + "become a liability for you." );
 
     modeNames = new JComboBox<>( modesModel );
+    final Color modeNamesNormal = modeNames.getForeground();
     modeNames.addItemListener( new ItemListener()
     {
       @Override
@@ -253,6 +254,7 @@ public class CipherParameterPane
                                           + "recommended by Niels Ferguson and<br>"
                                           + "Bruce Schneier (two well-known<br>"
                                           + "cryptographers)." );
+                modeNames.setForeground( modeNamesNormal );
                 break;
 
               case "PCBC":
@@ -260,6 +262,7 @@ public class CipherParameterPane
                                           + "PCBC (Propagating Cipher Block Chaining)<br>"
                                           + "mode causes small changes in the cipher<br>"
                                           + "text to propagate indefinitely." );
+                modeNames.setForeground( modeNamesNormal );
                 break;
 
               case "CFB":
@@ -270,6 +273,7 @@ public class CipherParameterPane
                                           + "lost (only parts of the message will<br>"
                                           + "be lost, in other words)" );
 
+                modeNames.setForeground( modeNamesNormal );
                 break;
 
               case "CTR":
@@ -287,17 +291,22 @@ public class CipherParameterPane
                                           + "is not recommended for production systems</font>,<br>"
                                           + "as it causes patterns in the plaintext to show<br>"
                                           + "up in the ciphertext, thus offering a potential<br>"
-                                          + "wealth of data to cryptanalysts!<br>" );
+                                          + "wealth of information to cryptanalysts!<br>"
+                                          + "<br>"
+                                          + "See the picture (below) for a demonstration." );
+                modeNames.setForeground( Color.red );
                 break;
 
               case "OFB":
                 modeNames.setToolTipText( "<html>"
                                           + "OFB (Output Feedback) mode is a<br>"
                                           + "completely symmetric mode." );
+                modeNames.setForeground( modeNamesNormal );
                 break;
 
               default:
                 modeNames.setToolTipText( "No information on this mode is available" );
+                modeNames.setForeground( modeNamesNormal );
               }
           }
       }
@@ -331,8 +340,8 @@ public class CipherParameterPane
                              + "(a 38-digit decimal number); a<br>"
                              + "192-bit key has 2<sup>192</sup> variations (a<br>"
                              + "57-digit decimal number), which<br>"
-                             + "is 18 446 744 073 709 551 612<br>"
-                             + "times more difficult to break using<br>"
+                             + "is 18\u2009446\u2009744\u2009073\u2009709\u2009551\u2009612<br>"
+                             + "<em>times more difficult</em> to break using<br>"
                              + "brute-force computations." );
 
     algorithmModel.update( Algorithm.allNames() );
@@ -365,11 +374,13 @@ public class CipherParameterPane
     algorithmInfo.add( p2 );
     algorithmInfo.add( p3 );
     algorithmInfo.add( p4 );
-    algorithmInfo.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Cryptographic Algorithm & Parameters" ),
-                                                                 BorderFactory.createEmptyBorder( 0,
-                                                                                                  4,
-                                                                                                  4,
-                                                                                                  4 ) ) );
+    algorithmInfo
+        .setBorder( BorderFactory.createCompoundBorder( BorderFactory
+                                                            .createTitledBorder( "Cryptographic Algorithm & Parameters" ),
+                                                        BorderFactory.createEmptyBorder( 0,
+                                                                                         4,
+                                                                                         4,
+                                                                                         4 ) ) );
 
     fixedInitVector.setEnabled( false );
     randomInitVector.setEnabled( false );
@@ -425,9 +436,7 @@ public class CipherParameterPane
             fixedInitVector.setText( new String( Base64.encode( iv ) ) );
             fixedInitVector.setToolTipText( "IV Length = " + (8 * iv.length) + " bits" );
           }
-        catch( NoSuchAlgorithmException |
-               NoSuchPaddingException |
-               InvalidKeyException x )
+        catch( NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException x )
           {
             x.printStackTrace();
           }
@@ -686,11 +695,13 @@ public class CipherParameterPane
                     ivPanel );
     ivKeyPanel.add( BorderLayout.SOUTH,
                     keyPanel );
-    ivKeyPanel.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Initialization Vector & Secret Key" ),
-                                                              BorderFactory.createEmptyBorder( 0,
-                                                                                               4,
-                                                                                               4,
-                                                                                               4 ) ) );
+    ivKeyPanel
+        .setBorder( BorderFactory.createCompoundBorder( BorderFactory
+                                                            .createTitledBorder( "Initialization Vector & Secret Key" ),
+                                                        BorderFactory.createEmptyBorder( 0,
+                                                                                         4,
+                                                                                         4,
+                                                                                         4 ) ) );
 
     final JPanel parametersPanel = new JPanel( new BorderLayout( 0,
                                                                  4 ) );

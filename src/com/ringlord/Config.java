@@ -10,6 +10,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,19 +54,153 @@ public class Config
   public Config( final File file )
   {
     this( file,
-          null );
+	  null );
   }
 
 
   public Config( final File file,
-                 final String commentLine )
+	         final String commentLine )
   {
     super();
     this.file = file;
     this.info = (commentLine == null
-        ? "Edit only with great care: If you break it, you get to keep both parts!"
-        : commentLine);
-    load( file );
+	? "Edit only with great care: If you break it, you get to keep both parts!"
+	: commentLine);
+    load( file,
+	  prefs );
+
+    try
+      {
+	final WatchService ws = FileSystems.getDefault().newWatchService();
+	final Path parent = file.toPath().getParent();
+	parent.register( ws,
+	                 StandardWatchEventKinds.ENTRY_MODIFY );
+	final Thread updated = new Thread()
+	{
+	  @Override
+	  public void run()
+	  {
+	    Config.this.isReady = true;
+	    while( Config.this.isReady )
+	      {
+		try
+		  {
+		    final WatchKey key = ws.take();
+		    for( final WatchEvent<?> event : key.pollEvents() )
+		      {
+			final WatchEvent.Kind<?> kind = event.kind();
+			if( kind == StandardWatchEventKinds.ENTRY_MODIFY )
+			  {
+			    @SuppressWarnings("unchecked") final Path path = parent.resolve( ((WatchEvent<Path>)event)
+				.context() );
+			    if( path.equals( file.toPath() ) )
+			      {
+				if( wasJustSaved )
+				  {
+				    wasJustSaved = false;
+				    continue;
+				  }
+				final Map<String,String> updatedConfig = new HashMap<>();
+				load( file,
+				      updatedConfig );
+				final boolean isModified = merge( prefs,
+				                                  updatedConfig );
+				if( isModified )
+				  {
+				    isDirty = true;
+				    setChanged();
+				    notifyObservers();
+				  }
+			      }
+			  }
+		      }
+		    key.reset();
+		  }
+		catch( final InterruptedException x )
+		  {
+		    break;
+		  }
+	      }
+	  }
+	};
+	updated.setDaemon( true );
+	updated.start();
+      }
+    catch( final IOException x )
+      {
+	x.printStackTrace( System.err );
+      }
+  }
+
+
+  /**
+   * Merges changes from disk and changes in memory, with awareness of the
+   * original data that was loaded from disk.
+   *
+   *
+   * Entries are modified in memory only if the have not bee
+   *
+   * modified in the updated configuration, which remain unchanged in memory are
+   * updated; Entries modified in the updated
+   *
+   * @param currentConfig
+   * @param updatedConfig
+   * @param originalConfig
+   */
+  private boolean merge( final Map<String,String> currentConfig,
+	                 final Map<String,String> updatedConfig )
+  {
+    boolean isModified = false;
+
+    // Add new keys from the updated configuration; update keys whose value has
+    // changed
+    for( final Map.Entry<String,String> e : updatedConfig.entrySet() )
+      {
+	if( currentConfig.containsKey( e.getKey() ) )
+	  {
+	    final String updatedValue = e.getValue();
+	    final String currentValue = currentConfig.get( e.getKey() );
+	    if( ((updatedValue == null) && (currentValue != null)) ||
+		((updatedValue != null) && (currentValue == null)) ||
+		!updatedValue.equals( currentValue ) )
+	      {
+		currentConfig.put( e.getKey(),
+		                   e.getValue() );
+		isModified = true;
+	      }
+	  }
+	else
+	  {
+	    currentConfig.put( e.getKey(),
+		               e.getValue() );
+	    isModified = true;
+	  }
+      }
+
+    // Remove keys from the current configuration if no longer present in the
+    // updated configuration
+    List<String> toBeRemoved = null;
+    for( final Map.Entry<String,String> e : currentConfig.entrySet() )
+      {
+	if( !updatedConfig.containsKey( e.getKey() ) )
+	  {
+	    if( toBeRemoved == null )
+	      {
+		toBeRemoved = new ArrayList<>();
+	      }
+	    toBeRemoved.add( e.getKey() );
+	  }
+      }
+    if( toBeRemoved != null )
+      {
+	for( final String key : toBeRemoved )
+	  {
+	    currentConfig.remove( key );
+	  }
+	isModified = true;
+      }
+
+    return isModified;
   }
 
 
@@ -84,66 +224,74 @@ public class Config
    *
    * @param file
    */
-  private void load( final File file )
+  private void load( final File file,
+	             final Map<String,String> prefs )
   {
+    final File parent = file.getParentFile();
+    if( parent != null )
+      {
+	parent.mkdirs();
+      }
+    prefs.clear();
     try( final BufferedReader f = new BufferedReader( new FileReader( file ) ) )
       {
-        final Properties p = new Properties();
-        p.load( f );
-        for( final Object o : p.keySet() )
-          {
-            final String key = (String)o;
-            prefs.put( key,
-                       p.getProperty( key ) );
-          }
+	final Properties p = new Properties();
+	p.load( f );
+	for( final Object o : p.keySet() )
+	  {
+	    final String key = (String)o;
+	    prefs.put( key,
+		       p.getProperty( key ) );
+	  }
       }
     catch( final FileNotFoundException x )
       {
-        // It's fine, we will create it
+	// It's fine, we will create it
       }
     catch( final IOException x )
       {
-        x.printStackTrace();
+	x.printStackTrace();
       }
   }
 
 
   private void save( final File file )
   {
+    wasJustSaved = true; // prevent reload/merge trigger
     try( final BufferedWriter f = new BufferedWriter( new FileWriter( file ) ) )
       {
-        final List<String> keys = new ArrayList<>();
-        keys.addAll( prefs.keySet() );
-        Collections.sort( keys );
+	final List<String> keys = new ArrayList<>();
+	keys.addAll( prefs.keySet() );
+	Collections.sort( keys );
 
-        final StringTokenizer t = new StringTokenizer( info,
-                                                       "\n\r" );
-        while( t.hasMoreTokens() )
-          {
-            final String s = t.nextToken();
-            if( !s.startsWith( "#" ) )
-              {
-                f.write( "# " );
-              }
-            f.write( s );
-            f.write( EOLN );
-          }
-        f.write( "# Last written on " + new Date() + EOLN );
-        f.write( EOLN );
-        for( final String key : keys )
-          {
-            f.write( escape( key ) + "=" + escape( prefs.get( key ) ) + EOLN );
-          }
-        f.write( EOLN );
-        f.write( "#eot" );
-        f.write( EOLN );
-        f.flush();
+	final StringTokenizer t = new StringTokenizer( info,
+	                                               "\n\r" );
+	while( t.hasMoreTokens() )
+	  {
+	    final String s = t.nextToken();
+	    if( !s.startsWith( "#" ) )
+	      {
+		f.write( "# " );
+	      }
+	    f.write( s );
+	    f.write( EOLN );
+	  }
+	f.write( "# Last written on " + new Date() + EOLN );
+	f.write( EOLN );
+	for( final String key : keys )
+	  {
+	    f.write( escape( key ) + "=" + escape( prefs.get( key ) ) + EOLN );
+	  }
+	f.write( EOLN );
+	f.write( "#eot" );
+	f.write( EOLN );
+	f.flush();
       }
     catch( final IOException x )
       {
-        Logger.getGlobal().log( Level.SEVERE,
-                                "Failed to save config to file " + file,
-                                x );
+	Logger.getGlobal().log( Level.SEVERE,
+	                        "Failed to save config to file " + file,
+	                        x );
       }
     isDirty = false;
     setChanged();
@@ -161,7 +309,7 @@ public class Config
   {
     if( isDirty || !file.exists() )
       {
-        save( file );
+	save( file );
       }
   }
 
@@ -170,8 +318,9 @@ public class Config
 
   public void reset()
   {
-    load( file );
-    hasChanged();
+    load( file,
+	  prefs );
+    setChanged();
     notifyObservers();
   }
 
@@ -182,7 +331,7 @@ public class Config
   {
     if( isDirty )
       {
-        save();
+	save();
       }
   }
 
@@ -197,27 +346,27 @@ public class Config
    * @param value
    */
   public void put( final String baseKey,
-                   final List<String> values )
+	           final List<String> values )
   {
     int n = 0;
     for( final String val : values )
       {
-        put( baseKey + "." + (n++),
-             val );
+	put( baseKey + "." + (n++),
+	     val );
       }
     // Now remove all sequentially numbered keys beyond the size of this list
     while( true )
       {
-        final String k = baseKey + "." + (n++);
-        if( get( k,
-                 (String)null ) == null )
-          {
-            break;
-          }
-        put( k,
-             (String)null );
+	final String k = baseKey + "." + (n++);
+	if( get( k,
+	         (String)null ) == null )
+	  {
+	    break;
+	  }
+	put( k,
+	     (String)null );
       }
-    hasChanged();
+    setChanged();
   }
 
 
@@ -230,27 +379,27 @@ public class Config
    * @return
    */
   public List<String> get( final String baseKey,
-                           final List<String> defaultValues )
+	                   final List<String> defaultValues )
   {
     List<String> result = null;
     int n = 0;
     while( true )
       {
-        final String val = get( baseKey + "." + (n++),
-                                (String)null );
-        if( val == null )
-          {
-            break;
-          }
-        if( result == null )
-          {
-            result = new ArrayList<>();
-          }
-        result.add( val );
+	final String val = get( baseKey + "." + (n++),
+	                        (String)null );
+	if( val == null )
+	  {
+	    break;
+	  }
+	if( result == null )
+	  {
+	    result = new ArrayList<>();
+	  }
+	result.add( val );
       }
     return (result == null
-        ? defaultValues
-        : result);
+	? defaultValues
+	: result);
   }
 
 
@@ -266,53 +415,53 @@ public class Config
    * @param separator
    */
   public void put( final String key,
-                   final List<String> value,
-                   final String separator )
+	           final List<String> value,
+	           final String separator )
   {
     if( value == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        final StringBuilder sb = new StringBuilder();
-        boolean isFirst = true;
-        if( separator != null )
-          {
-            for( final String s : value )
-              {
-                if( isFirst )
-                  {
-                    isFirst = false;
-                  }
-                else
-                  {
-                    sb.append( separator );
-                  }
-                sb.append( s );
-              }
-          }
-        else
-          {
-            for( final String s : value )
-              {
-                if( isFirst )
-                  {
-                    isFirst = false;
-                  }
-                else
-                  {
-                    sb.append( "," );
-                  }
-                final byte[] bytes = Base64.encode( s.getBytes( utf8 ) );
-                sb.append( new String( bytes ) );
-              }
-          }
-        prefs.put( key,
-                   sb.toString() );
+	final StringBuilder sb = new StringBuilder();
+	boolean isFirst = true;
+	if( separator != null )
+	  {
+	    for( final String s : value )
+	      {
+		if( isFirst )
+		  {
+		    isFirst = false;
+		  }
+		else
+		  {
+		    sb.append( separator );
+		  }
+		sb.append( s );
+	      }
+	  }
+	else
+	  {
+	    for( final String s : value )
+	      {
+		if( isFirst )
+		  {
+		    isFirst = false;
+		  }
+		else
+		  {
+		    sb.append( "," );
+		  }
+		final byte[] bytes = Base64.encode( s.getBytes( utf8 ) );
+		sb.append( new String( bytes ) );
+	      }
+	  }
+	prefs.put( key,
+	           sb.toString() );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
@@ -332,43 +481,43 @@ public class Config
    * @return
    */
   public List<String> get( final String key,
-                           final List<String> defaultValue,
-                           final String separator )
+	                   final List<String> defaultValue,
+	                   final String separator )
   {
     final String tmp = prefs.get( key );
     if( (tmp == null) || (tmp.length() == 0) )
       {
-        return defaultValue;
+	return defaultValue;
       }
     final List<String> result = new ArrayList<>();
     int start = 0;
     int pos;
     if( (separator != null) && (separator.length() > 0) )
       {
-        final int len = separator.length();
-        while( (pos = tmp.indexOf( separator,
-                                   start )) > -1 )
-          {
-            result.add( tmp.substring( start,
-                                       pos ) );
-            start = pos + len;
-          }
-        result.add( tmp.substring( start ) );
+	final int len = separator.length();
+	while( (pos = tmp.indexOf( separator,
+	                           start )) > -1 )
+	  {
+	    result.add( tmp.substring( start,
+		                       pos ) );
+	    start = pos + len;
+	  }
+	result.add( tmp.substring( start ) );
       }
     else
       {
-        while( (pos = tmp.indexOf( ",",
-                                   start )) > -1 )
-          {
-            final byte[] bytes = Base64.decode( tmp.substring( start,
-                                                               pos ).getBytes() );
-            result.add( new String( bytes,
-                                    utf8 ) );
-            start = pos + 1;
-          }
-        final byte[] bytes = Base64.decode( tmp.substring( start ).getBytes() );
-        result.add( new String( bytes,
-                                utf8 ) );
+	while( (pos = tmp.indexOf( ",",
+	                           start )) > -1 )
+	  {
+	    final byte[] bytes = Base64.decode( tmp.substring( start,
+		                                               pos ).getBytes() );
+	    result.add( new String( bytes,
+		                    utf8 ) );
+	    start = pos + 1;
+	  }
+	final byte[] bytes = Base64.decode( tmp.substring( start ).getBytes() );
+	result.add( new String( bytes,
+	                        utf8 ) );
       }
     return result;
   }
@@ -377,161 +526,160 @@ public class Config
   // ======================================================================
 
   public void put( final String key,
-                   final String value )
+	           final String value )
   {
     if( value == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        prefs.put( key,
-                   value );
+	prefs.put( key,
+	           value );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
   public String get( final String key,
-                     final String defaultValue )
+	             final String defaultValue )
   {
     final String value = prefs.get( key );
     return (value == null
-        ? defaultValue
-        : value);
+	? defaultValue
+	: value);
   }
 
 
   // ======================================================================
   public void put( final String key,
-                   final Rectangle rect )
+	           final Rectangle rect )
   {
     if( rect == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        prefs.put( key,
-                   rect.x + "," + rect.y + "," + rect.width + "," + rect.height );
+	prefs.put( key,
+	           rect.x + "," + rect.y + "," + rect.width + "," + rect.height );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
   public Rectangle get( final String key,
-                        final Rectangle defaultValue )
+	                final Rectangle defaultValue )
   {
     final String value = prefs.get( key );
     if( value == null )
       {
-        return defaultValue;
+	return defaultValue;
       }
 
     try
       {
-        int prev, comma;
+	int prev, comma;
 
-        comma = value.indexOf( ',' );
-        final int x = Integer.parseInt( value.substring( 0,
-                                                         comma ) );
+	comma = value.indexOf( ',' );
+	final int x = Integer.parseInt( value.substring( 0,
+	                                                 comma ) );
 
-        prev = comma + 1;
-        comma = value.indexOf( ',',
-                               prev );
-        final int y = Integer.parseInt( value.substring( prev,
-                                                         comma ) );
+	prev = comma + 1;
+	comma = value.indexOf( ',',
+	                       prev );
+	final int y = Integer.parseInt( value.substring( prev,
+	                                                 comma ) );
 
-        prev = comma + 1;
-        comma = value.indexOf( ',',
-                               prev );
-        final int w = Integer.parseInt( value.substring( prev,
-                                                         comma ) );
+	prev = comma + 1;
+	comma = value.indexOf( ',',
+	                       prev );
+	final int w = Integer.parseInt( value.substring( prev,
+	                                                 comma ) );
 
-        prev = comma + 1;
-        final int h = Integer.parseInt( value.substring( prev ) );
+	prev = comma + 1;
+	final int h = Integer.parseInt( value.substring( prev ) );
 
-        return new Rectangle( x,
-                              y,
-                              w,
-                              h );
+	return new Rectangle( x,
+	                      y,
+	                      w,
+	                      h );
       }
     catch( final Exception x )
       {
-        x.printStackTrace();
-        return defaultValue;
+	x.printStackTrace();
+	return defaultValue;
       }
   }
 
 
   // ======================================================================
   public void put( final String key,
-                   final Boolean value )
+	           final Boolean value )
   {
     if( value == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        prefs.put( key,
-                   String.valueOf( value ) );
+	prefs.put( key,
+	           String.valueOf( value ) );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
   public boolean get( final String key,
-                      final boolean defaultValue )
+	              final boolean defaultValue )
   {
     try
       {
-        final String s = prefs.get( key );
-        if( s == null )
-          {
-            return defaultValue;
-          }
-        return Boolean.parseBoolean( s );
+	final String s = prefs.get( key );
+	if( s == null )
+	  {
+	    return defaultValue;
+	  }
+	return Boolean.parseBoolean( s );
       }
     catch( final NullPointerException x )
       {
-        return defaultValue;
+	return defaultValue;
       }
   }
 
 
   // ======================================================================
   public void put( final String key,
-                   final Double value )
+	           final Double value )
   {
     if( value == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        prefs.put( key,
-                   String.valueOf( value ) );
+	prefs.put( key,
+	           String.valueOf( value ) );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
   public double get( final String key,
-                     final double defaultValue )
+	             final double defaultValue )
   {
     try
       {
-        return Double.parseDouble( prefs.get( key ) );
+	return Double.parseDouble( prefs.get( key ) );
       }
-    catch( NullPointerException |
-           NumberFormatException x )
+    catch( NullPointerException | NumberFormatException x )
       {
-        return defaultValue;
+	return defaultValue;
       }
   }
 
@@ -539,33 +687,32 @@ public class Config
   // ======================================================================
 
   public void put( final String key,
-                   final Long value )
+	           final Long value )
   {
     if( value == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        prefs.put( key,
-                   String.valueOf( value ) );
+	prefs.put( key,
+	           String.valueOf( value ) );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
   public long get( final String key,
-                   final long defaultValue )
+	           final long defaultValue )
   {
     try
       {
-        return Long.parseLong( prefs.get( key ) );
+	return Long.parseLong( prefs.get( key ) );
       }
-    catch( NullPointerException |
-           NumberFormatException x )
+    catch( NullPointerException | NumberFormatException x )
       {
-        return defaultValue;
+	return defaultValue;
       }
   }
 
@@ -573,33 +720,32 @@ public class Config
   // ======================================================================
 
   public void put( final String key,
-                   final Integer value )
+	           final Integer value )
   {
     if( value == null )
       {
-        prefs.remove( key );
+	prefs.remove( key );
       }
     else
       {
-        prefs.put( key,
-                   String.valueOf( value ) );
+	prefs.put( key,
+	           String.valueOf( value ) );
       }
     isDirty = true;
-    hasChanged();
+    setChanged();
   }
 
 
   public int get( final String key,
-                  final int defaultValue )
+	          final int defaultValue )
   {
     try
       {
-        return Integer.parseInt( prefs.get( key ) );
+	return Integer.parseInt( prefs.get( key ) );
       }
-    catch( NullPointerException |
-           NumberFormatException x )
+    catch( NullPointerException | NumberFormatException x )
       {
-        return defaultValue;
+	return defaultValue;
       }
   }
 
@@ -612,34 +758,36 @@ public class Config
     final int len = s.length();
     for( int i = 0; i < len; i++ )
       {
-        final char c = s.charAt( i );
-        switch( c )
-          {
-          case '\\':
-          case ':':
-          case '=':
-          case ' ':
-            sb.append( '\\' );
-            break;
+	final char c = s.charAt( i );
+	switch( c )
+	  {
+	  case '\\':
+	  case ':':
+	  case '=':
+	  case ' ':
+	    sb.append( '\\' );
+	    break;
 
-          case '\t':
-            sb.append( "\\t" );
-            break;
+	  case '\t':
+	    sb.append( "\\t" );
+	    break;
 
-          case '\n':
-            sb.append( "\\n" );
-            continue;
+	  case '\n':
+	    sb.append( "\\n" );
+	    continue;
 
-          case '\r':
-            sb.append( "\\r" );
-            continue;
-          }
-        sb.append( c );
+	  case '\r':
+	    sb.append( "\\r" );
+	    continue;
+	  }
+	sb.append( c );
       }
     return sb.toString();
   }
 
   private boolean isDirty;
+  private volatile boolean isReady;
+  private volatile boolean wasJustSaved;
   //
   private final File file;
   private final String info;

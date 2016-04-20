@@ -3,6 +3,7 @@ package com.ringlord.cryptcreature;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.nio.charset.Charset;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -16,6 +17,8 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
@@ -31,7 +34,9 @@ public class CipherTextOutput
   extends JTextArea
 {
   public CipherTextOutput( final CipherParameterPane cipherParameters,
-                           final JTextComponent plainTextInput )
+                           final JTextComponent plainTextInput,
+                           final JLabel inputPictureLabel,
+                           final JLabel outputPictureLabel )
   {
     super();
     setPreferredSize( new Dimension( 320,
@@ -88,6 +93,9 @@ public class CipherTextOutput
 
           default:
           }
+        updateImage( cipherParameters,
+                     inputPictureLabel,
+                     outputPictureLabel );
         modified( plainTextInput.getText(),
                   cipherParameters );
       }
@@ -280,6 +288,175 @@ public class CipherTextOutput
         }.execute();
       }
   }
+
+
+  private void updateImage( final CipherParameterPane cipherParameters,
+                            final JLabel inputPictureLabel,
+                            final JLabel outputPictureLabel )
+  {
+    if( (algorithm != null) && (key != null) )
+      {
+        new SwingWorker<Void,Void>()
+        {
+          @Override
+          public Void doInBackground()
+          {
+            try
+              {
+                final Cipher c = Cipher.getInstance( algorithm.spec() );
+                final byte[] iv = cipherParameters.getChosenInitVector();
+
+                final BufferedImage img = (BufferedImage)((ImageIcon)inputPictureLabel.getIcon()).getImage();
+                final int wide = img.getWidth( null );
+                final int high = img.getHeight( null );
+                final byte[] rgba = new byte[wide * high * 4];
+                int i = 0;
+                for( int w = 0; w < wide; w++ )
+                  {
+                    for( int h = 0; h < high; h++ )
+                      {
+                        final int pixel = img.getRGB( w,
+                                                      h );
+                        rgba[i++] = (byte)(pixel >> 24);
+                        rgba[i++] = (byte)((pixel >> 16) & 0xff);
+                        rgba[i++] = (byte)((pixel >> 8) & 0xff);
+                        rgba[i++] = (byte)(pixel & 0xff);
+                      }
+                  }
+
+                if( iv == null )
+                  {
+                    c.init( Cipher.ENCRYPT_MODE,
+                            key );
+                  }
+                else
+                  {
+                    final IvParameterSpec ivSpec = new IvParameterSpec( iv );
+                    c.init( Cipher.ENCRYPT_MODE,
+                            key,
+                            ivSpec );
+                  }
+                final byte[] cRGBA = c.doFinal( rgba );
+
+                final BufferedImage buf = new BufferedImage( wide,
+                                                             high,
+                                                             img.getType() );
+                i = 0;
+                for( int w = 0; w < wide; w++ )
+                  {
+                    for( int h = 0; h < high; h++ )
+                      {
+                        final int pixel = (cRGBA[i++] << 24) | (cRGBA[i++] << 16) | (cRGBA[i++] << 8) | cRGBA[i++];
+                        buf.setRGB( w,
+                                    h,
+                                    pixel );
+                      }
+                  }
+
+                outputPictureLabel.setIcon( new ImageIcon( buf ) );
+              }
+            catch( final NoSuchAlgorithmException x )
+              {
+                JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                               "<html>" +
+                                                   "The algorithm '" +
+                                                   cipherParameters.getChosenAlgorithm().name() +
+                                                   "' is unavailable!",
+                                               "No Such Algorithm",
+                                               JOptionPane.ERROR_MESSAGE );
+
+              }
+            catch( final NoSuchPaddingException x )
+              {
+                JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                               "<html>" +
+                                                   "The padding '" +
+                                                   cipherParameters.getChosenAlgorithm().padding() +
+                                                   "' is unavailable!",
+                                               "No Such Padding",
+                                               JOptionPane.ERROR_MESSAGE );
+              }
+            catch( final InvalidKeyException x )
+              {
+                final String algorithmName = key.getAlgorithm();
+                if( algorithm.name().equals( algorithmName ) )
+                  {
+                    JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                                   "<html>" +
+                                                       "The " +
+                                                       (8 * key.getEncoded().length) +
+                                                       "-bit SecretKey " +
+                                                       " generated<br>" +
+                                                       "for the cryptographic cipher " +
+                                                       algorithmName +
+                                                       ",<br>" +
+                                                       "is invalid and cannot be used.",
+                                                   "Invalid Key",
+                                                   JOptionPane.ERROR_MESSAGE );
+                  }
+                else
+                  {
+                    JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                                   "<html>" +
+                                                       "The " +
+                                                       (8 * key.getEncoded().length) +
+                                                       "-bit SecretKey was " +
+                                                       " generated<br>" +
+                                                       "for the cryptographic cipher " +
+                                                       algorithmName +
+                                                       ",<br>" +
+                                                       "which is not compatible with " +
+                                                       algorithm.name() +
+                                                       ".",
+                                                   "Invalid Key",
+                                                   JOptionPane.ERROR_MESSAGE );
+                  }
+              }
+            catch( final InvalidAlgorithmParameterException e )
+              {
+                JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                               "<html>" + "Parameters (key and/or IV) are not valid",
+                                               "Invalid Algorithm Parameter",
+                                               JOptionPane.ERROR_MESSAGE );
+              }
+            catch( final IllegalBlockSizeException x )
+              {
+                JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                               "<html>" + "The block size is not valid",
+                                               "Illegal Block Size",
+                                               JOptionPane.ERROR_MESSAGE );
+              }
+            catch( final BadPaddingException x )
+              {
+                final String padding = cipherParameters.getChosenAlgorithm().padding();
+                if( "NoPadding".equalsIgnoreCase( padding ) )
+                  {
+                    JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                                   "<html>" +
+                                                       "For the chosen '" +
+                                                       padding +
+                                                       "' option, the length of your<br>" +
+                                                       "plain text input must perfectly match the algorithm's" +
+                                                       "block size. This is not the case. The easiest fix is" +
+                                                       "to pick one of the cryptographically secure padding" +
+                                                       "options, rather than 'NoPadding'",
+                                                   "Bad Padding",
+                                                   JOptionPane.ERROR_MESSAGE );
+                  }
+                else
+                  {
+                    JOptionPane.showMessageDialog( CipherTextOutput.this,
+                                                   x.getMessage(),
+                                                   "Bad Padding",
+                                                   JOptionPane.ERROR_MESSAGE );
+                  }
+              }
+            return null;
+          }
+        }.execute();
+      }
+  }
+
   private Algorithm algorithm;
   private byte[] iv;
   private Key key;

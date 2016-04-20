@@ -16,8 +16,8 @@ import com.ringlord.logging.LogFormatter;
 
 public class CryptCreature
 {
-  public static final String VERSION = "1.2";
-  public static final String VERDATE = "2016-03-09";
+  public static final String VERSION = "1.3";
+  public static final String VERDATE = "2016-04-19";
   public static final String CPYEARS = "2014,2016";
 
 
@@ -75,8 +75,7 @@ public class CryptCreature
             logger.severe( "Unable to create logging directory " + loggingDir );
           }
       }
-    catch( SecurityException |
-           IOException x )
+    catch( SecurityException | IOException x )
       {
         // Cannot create the Formatter or LogFileHandler
         logger.severe( "Unable to setup intended logging in directory " + loggingDir );
