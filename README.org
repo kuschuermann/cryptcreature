@@ -17,3 +17,6 @@
 ** GitHub Repository
    The sources are at GitHub (Project: cryptcreature):
    https://github.com/kuschuermann/cryptcreature
+** Ready-to-Run JAR for download
+   A ready-to-run JAR file is available for download from the
+   project’s home page at http://www.ringlord.com/cryptcreature.html
