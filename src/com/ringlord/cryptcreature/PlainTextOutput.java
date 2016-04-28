@@ -7,6 +7,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -83,16 +84,13 @@ public class PlainTextOutput
             byte[] plainTextHash = null;
 
             int itemIndex = 0;
-            int start = 0;
-            int pos;
+            final StringTokenizer t = new StringTokenizer( text,
+                                                           " \t\n\r,;|" );
             try
               {
-                while( (pos = text.indexOf( "\n",
-                                            start )) > -1 )
+                while( t.hasMoreTokens() )
                   {
-                    final byte[] bytes = Base64.decode( text.substring( start,
-                                                                        pos ).getBytes() );
-                    start = pos + 1;
+                    final byte[] bytes = Base64.decode( t.nextToken().getBytes() );
                     switch( itemIndex++ )
                       {
                       case 0:
@@ -115,22 +113,6 @@ public class PlainTextOutput
                         // too much data, ignore it
                         break;
                       }
-                  }
-                switch( itemIndex )
-                  {
-                  case 1:
-                    // take remainder as the init vector
-                    initVector = Base64.decode( text.substring( start ).getBytes() );
-                    logger.finest( "Initialization vector is " + initVector.length + " bytes" );
-                    itemIndex++;
-                    break;
-
-                  case 2:
-                    // take remainder as the hash
-                    plainTextHash = Base64.decode( text.substring( start ).getBytes() );
-                    logger.finest( "SHA-256 digest is " + plainTextHash.length + " bytes" );
-                    itemIndex++;
-                    break;
                   }
               }
             catch( final Exception x )

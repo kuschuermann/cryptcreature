@@ -126,9 +126,11 @@ public class CipherTextOutput
     } );
 
     setToolTipText( "<html>"
-                    + "The first two lines (cipher text and initialization vector, if not empty)<br>"
-                    + "are required. The third line serves to verify that the original plaintext<br>"
-                    + "was recovered intact; in many cases it may be unnecessary.<br>"
+                    + "The first two items (cipher text and initialization vector, if not empty)<br>"
+                    + "are required. The third item serves to verify that the original plaintext<br>"
+                    + "was recovered intact; in many cases it may be unnecessary. Items<br>"
+                    + "can be separated from each other with whitespace, comma (,),<br>"
+                    + "semicolon (;), or a pipe (|).<br>"
                     + "<br>"
                     + "Try modifying this to see what happens during decryption!<br>"
                     + "<br>"
