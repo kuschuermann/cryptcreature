@@ -374,13 +374,11 @@ public class CipherParameterPane
     algorithmInfo.add( p2 );
     algorithmInfo.add( p3 );
     algorithmInfo.add( p4 );
-    algorithmInfo
-        .setBorder( BorderFactory.createCompoundBorder( BorderFactory
-                                                            .createTitledBorder( "Cryptographic Algorithm & Parameters" ),
-                                                        BorderFactory.createEmptyBorder( 0,
-                                                                                         4,
-                                                                                         4,
-                                                                                         4 ) ) );
+    algorithmInfo.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Cryptographic Algorithm & Parameters" ),
+                                                                 BorderFactory.createEmptyBorder( 0,
+                                                                                                  4,
+                                                                                                  4,
+                                                                                                  4 ) ) );
 
     fixedInitVector.setEnabled( false );
     randomInitVector.setEnabled( false );
@@ -436,7 +434,9 @@ public class CipherParameterPane
             fixedInitVector.setText( new String( Base64.encode( iv ) ) );
             fixedInitVector.setToolTipText( "IV Length = " + (8 * iv.length) + " bits" );
           }
-        catch( NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException x )
+        catch( NoSuchAlgorithmException |
+               NoSuchPaddingException |
+               InvalidKeyException x )
           {
             x.printStackTrace();
           }
@@ -606,6 +606,7 @@ public class CipherParameterPane
       private void modified()
       {
         notifyActionListeners( ACTION_INITVECTOR_CHANGED );
+        checkBadKeyOrIV();
       }
     } );
 
@@ -638,6 +639,7 @@ public class CipherParameterPane
         updateSecretKeyDigest( secretKey,
                                secretKeyHash,
                                keyHashDigest );
+        checkBadKeyOrIV();
       }
     } );
 
@@ -695,13 +697,11 @@ public class CipherParameterPane
                     ivPanel );
     ivKeyPanel.add( BorderLayout.SOUTH,
                     keyPanel );
-    ivKeyPanel
-        .setBorder( BorderFactory.createCompoundBorder( BorderFactory
-                                                            .createTitledBorder( "Initialization Vector & Secret Key" ),
-                                                        BorderFactory.createEmptyBorder( 0,
-                                                                                         4,
-                                                                                         4,
-                                                                                         4 ) ) );
+    ivKeyPanel.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Initialization Vector & Secret Key" ),
+                                                              BorderFactory.createEmptyBorder( 0,
+                                                                                               4,
+                                                                                               4,
+                                                                                               4 ) ) );
 
     final JPanel parametersPanel = new JPanel( new BorderLayout( 0,
                                                                  4 ) );
@@ -720,6 +720,39 @@ public class CipherParameterPane
 
     add( BorderLayout.NORTH,
          parametersPanel );
+  }
+
+
+  private void checkBadKeyOrIV()
+  {
+    if( fgIV == null )
+      {
+        fgIV = fixedInitVector.getForeground();
+        fgSK = secretKey.getForeground();
+        ttIV = fixedInitVector.getToolTipText();
+        ttSK = secretKey.getToolTipText();
+      }
+
+    final String ivBase64 = fixedInitVector.getText();
+    final String skBase64 = secretKey.getText();
+    if( ivBase64.equals( skBase64 ) )
+      {
+        fixedInitVector.setForeground( Color.red );
+        secretKey.setForeground( Color.red );
+        fixedInitVector.setToolTipText( "<html>"
+                                        + "The Init Vector must not match the secret key, as the<br>"
+                                        + "secret key can be recovered through cryptanalysis!" );
+        secretKey.setToolTipText( "<html>"
+                                  + "The Init Vector must not match the secret key, as the<br>"
+                                  + "secret key can be recovered through cryptanalysis!" );
+      }
+    else
+      {
+        fixedInitVector.setForeground( fgIV );
+        secretKey.setForeground( fgSK );
+        fixedInitVector.setToolTipText( ttIV );
+        secretKey.setToolTipText( ttSK );
+      }
   }
 
 
@@ -864,6 +897,10 @@ public class CipherParameterPane
     private static final long serialVersionUID = -8939982052355500812L;
   }
 
+  private Color fgIV;
+  private Color fgSK;
+  private String ttIV;
+  private String ttSK;
   private JFileChooser keyFileChooser;
   //
   private final JComboBox<String> algorithmNames;

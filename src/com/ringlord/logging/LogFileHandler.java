@@ -17,7 +17,7 @@ import java.util.logging.Handler;
  *   {
  *     loggingDir.mkdirs();
  *   }
- *
+ * 
  * final Logger logger = Logger.getLogger( Logger.GLOBAL_LOGGER_NAME );
  * logger.setLevel( Level.FINEST );
  * try
@@ -71,6 +71,25 @@ public class LogFileHandler
   }
 
 
+  /**
+   * Create a LogFileHandler
+   *
+   * @param path
+   *          The directory where the log files are to be created. This defaults
+   *          to your "${HOME}" directory.
+   * @param pattern
+   *          The pattern to be used for the log files themselves. The default
+   *          is "unnamed-%u%g.log" where %u is a cyclical number, and %g is
+   *          used to differentiate logs when multiple threads are writing logs
+   *          to the same directory.
+   * @param maxSize
+   *          The maximum size of the log before it is forced to rotate.
+   * @param maxRotations
+   *          The maximum rotations (generations) to keep before the oldest is
+   *          discarded.
+   * @throws IOException
+   * @throws SecurityException
+   */
   public LogFileHandler( final File path,
                          final String pattern,
                          final int maxSize,
