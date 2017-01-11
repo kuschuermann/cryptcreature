@@ -53,7 +53,8 @@ public class GUI
 
     try
       {
-        final String osName = System.getProperty( "os.name" ).toUpperCase();
+        final String osName = System.getProperty( "os.name" )
+                                    .toUpperCase();
         if( (osName.indexOf( "WINDOWS" ) > -1) || // Microsoft © Windows
             (osName.indexOf( "MAC OS X" ) > -1) ) // Apple© Mac OS/X
           {
@@ -83,7 +84,9 @@ public class GUI
       }
     } );
 
-    ToolTipManager.sharedInstance().setDismissDelay( ToolTipManager.sharedInstance().getDismissDelay() * 2 );
+    ToolTipManager.sharedInstance()
+                  .setDismissDelay( ToolTipManager.sharedInstance()
+                                                  .getDismissDelay() * 2 );
 
     final List<Image> imageIcons = new ArrayList<>();
     imageIcons.add( Images.getImage( "/img/logo-64.png" ) );
@@ -129,7 +132,7 @@ public class GUI
     inputPicture.setToolTipText( "<html>"
                                  + "Tux has large areas of the same color,<br>"
                                  + "which is helpful in demonstrating flaws<br>"
-                                 + "in cipher algorithsm (such as ECB) by<br>"
+                                 + "in cipher algorithms (such as ECB) by<br>"
                                  + "visual means." );
     outputPicture.setToolTipText( "<html>"
                                   + "Random-looking pixels here are no<br>"
@@ -150,9 +153,8 @@ public class GUI
                                                                4,
                                                                0,
                                                                0 ) );
-    plainTextInputPanel
-        .add( BorderLayout.NORTH,
-              new JLabel( "1. Plain Text Input \u2014 To encrypt, type/paste your secret message here:" ) );
+    plainTextInputPanel.add( BorderLayout.NORTH,
+                             new JLabel( "1. Plain Text Input \u2014 To encrypt, type/paste your secret message here:" ) );
     plainTextInputPanel.add( BorderLayout.WEST,
                              new JLabel( "      " ) );
     plainTextInputPanel.add( BorderLayout.CENTER,
@@ -173,9 +175,8 @@ public class GUI
                                                                 0 ) );
     outputImagePane.add( BorderLayout.NORTH,
                          outputPicture );
-    cipherTextOutputPanel
-        .add( BorderLayout.NORTH,
-              new JLabel( "2. Base64 encoded \u2026 CipherText/InitVector/SHA-256 Hash \u2014 Send this or paste cipher text here:" ) );
+    cipherTextOutputPanel.add( BorderLayout.NORTH,
+                               new JLabel( "2. Base64 encoded \u2026 CipherText/InitVector/SHA-256 Hash \u2014 Send this or paste cipher text here:" ) );
     cipherTextOutputPanel.add( BorderLayout.WEST,
                                new JLabel( "      " ) );
     cipherTextOutputPanel.add( BorderLayout.CENTER,
@@ -240,8 +241,7 @@ public class GUI
                                                           12,
                                                           0,
                                                           12 );
-    final Border inner = BorderFactory.createCompoundBorder( BorderFactory
-                                                                 .createTitledBorder( "Encryption & Deciphering" ),
+    final Border inner = BorderFactory.createCompoundBorder( BorderFactory.createTitledBorder( "Encryption & Deciphering" ),
                                                              BorderFactory.createEmptyBorder( 0,
                                                                                               4,
                                                                                               4,
@@ -301,7 +301,8 @@ public class GUI
             sel = URLEncoder.encode( sel,
                                      "UTF-8" );
             final StringSelection selection = new StringSelection( sel );
-            final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            final Clipboard clipboard = Toolkit.getDefaultToolkit()
+                                               .getSystemClipboard();
             clipboard.setContents( selection,
                                    selection );
           }
@@ -322,7 +323,8 @@ public class GUI
             sel = cipherTextOutput.getText();
           }
         final StringSelection selection = new StringSelection( sel );
-        final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        final Clipboard clipboard = Toolkit.getDefaultToolkit()
+                                           .getSystemClipboard();
         clipboard.setContents( selection,
                                selection );
       }
