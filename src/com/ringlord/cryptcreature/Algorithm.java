@@ -200,7 +200,7 @@ public class Algorithm
       final List<Algorithm> result = new ArrayList<>();
       for( final String name : new String[]{"AES","Blowfish","DES","DESede","RSA"} )
         {
-          for( final String mode : new String[]{"CBC","PCBC","CFB","OFB","CTR","ECB"} )
+          for( final String mode : new String[]{"PFB","PCBC","CFB","OFB","CTR","CBC","ECB"} )
             {
               final boolean requireIV = !"ECB".equals( mode );
               for( final String padding : new String[]{"NoPadding",

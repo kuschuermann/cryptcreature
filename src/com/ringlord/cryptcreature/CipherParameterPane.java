@@ -198,6 +198,7 @@ public class CipherParameterPane
           {
             final String algorithm = (String)algorithmNames.getSelectedItem();
             modesModel.update( Algorithm.allModesFor( algorithm ) );
+            modesModel.setSelectedItem( "CTR" ); // Avoid default 1st "CBC"
 
             final String mode = (String)modeNames.getSelectedItem();
             final String padding = (String)paddingNames.getSelectedItem();
@@ -249,11 +250,10 @@ public class CipherParameterPane
               case "CBC":
                 modeNames.setToolTipText( "<html>"
                                           + "CBC (Cipher Block Chaining) mode is<br>"
-                                          + "is generally considered suitable for<br>"
-                                          + "use in production systems, and is<br>"
-                                          + "recommended by Niels Ferguson and<br>"
-                                          + "Bruce Schneier (two well-known<br>"
-                                          + "cryptographers)." );
+                                          + "is no longer considered suitable for<br>"
+                                          + "use in production systems, as it has<br>"
+                                          + "experienced a number of attacks<br>"
+                                          + "against it." );
                 modeNames.setForeground( modeNamesNormal );
                 break;
 
